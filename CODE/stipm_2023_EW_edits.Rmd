@@ -3,14 +3,14 @@ title: "2023 Willapa Bay natural coho forecast"
 author: "" 
 date: "`r Sys.Date()`"
 params:
-  f_pop_stock_metadata: "data/pop_stock_metadata.csv"
-  f_prior_year_dataset: "data/fram_cwt_smolt_fulljoin_for2022.csv"
-  f_fram_mdb: "~/O/code/coho/fram_mdbs/PSC_CoTC_PostSeason_CohoFRAMDB_thru2021_021523.mdb"
-  f_fram_prelim_escp: "~/T/DFW-Salmon Mgmt Modeling Team - General/Escapement files/Coho/fram_coho_escapement_2023.xlsx"
-  f_smolt_migrants: "data/Smolt Time Series.xlsx"
-  f_cwt_rel_rec_lookup: "data/rmis_survival_hatchery_release_location.csv"
-  f_cwt_releases: "data/rmis_releases_all_coho_by2010_onward.csv"
-  f_cwt_recoveries: "data/rmis_recs_coho_2019_2022.csv"
+  f_pop_stock_metadata: "RAW_DATA/pop_stock_metadata.csv"
+  f_prior_year_dataset: "RAW_DATA/fram_cwt_smolt_fulljoin_for2022.csv"
+ # f_fram_mdb: "~/O/code/coho/fram_mdbs/PSC_CoTC_PostSeason_CohoFRAMDB_thru2021_021523.mdb"
+#  f_fram_prelim_escp: "~/T/DFW-Salmon Mgmt Modeling Team - General/Escapement files/Coho/fram_coho_escapement_2023.xlsx"
+  f_smolt_migrants: "RAW_DATA/Smolt Time Series.xlsx"
+  f_cwt_rel_rec_lookup: "RAW_DATA/rmis_survival_hatchery_release_location.csv"
+  f_cwt_releases: "RAW_DATA/rmis_releases_all_coho_by2010_onward.csv"
+  f_cwt_recoveries: "RAW_DATA/rmis_recs_coho_2019_2022.csv"
 editor_options: 
   chunk_output_type: console
 output: 
@@ -51,11 +51,11 @@ pal_lag_mod <- c("purple", "gold", "cyan", "pink")
 
 # see below for update integration:
 # - first as 'prelim' with smolts, CWTs, escp and lm(log(hvst) ~ log(spwn))
-# - then redone after CoTC postseason mdb available
+# - then redone after CoTC postseason mdb available 
 #coho_data_tbl_prelim <- read_csv("data/fram_cwt_smolt_fulljoin_for2023_prelim.csv")
-coho_data_tbl <- read_csv("data/fram_cwt_smolt_fulljoin_for2023.csv")
+coho_data_tbl <- read_csv("RAW_DATA/fram_cwt_smolt_fulljoin_for2023.csv")
 
-
+### WHAT DOES PDRW MEAN?
 # pdrw <- readRDS("O:/code/coho/forecast_wb/pdrw_2020.rds")
 # pdrw <- readRDS("~/O/code/coho/forecast_wb/pdrw_2020.rds")
 # pdrw |> filter(StockID==161, year > 2019) |> group_by(mod, StockID, year) |> summarise(across(c(spwn, hvst, rtrn), ~median(.,na.rm=T)))
@@ -207,7 +207,7 @@ rmis$est_n_rel_rec <- rmis$lu |>
 # rmis$rec |> count(brood_year, rec_year)
 
 
-# ## quick look at questionable recovery records
+# ## quick look at questionable recovery records - by questionable just meaning very few recovered fish?
 # rmis$rec |> 
 #   group_by(brood_year, rec_year, tag_code) |> 
 #   summarise(est_n_rec = sum(estimated_number), .groups = "drop") |>
@@ -217,7 +217,7 @@ rmis$est_n_rel_rec <- rmis$lu |>
 # #QAQC to illustrate 
 # # - matches for (rec)'year' 2017-18 (brood 15-16)
 # # - adequate records for (rec)'year' 2019-20 (brood 17-18)
-# # - inadequate recs for (rec)'year' 2021 (brood 19)
+ # - inadequate recs for (rec)'year' 2021 (brood 19)
 # rmis$est_n_rel_rec |> 
 #   filter(between(year, 2017, 2021)) |> 
 #   left_join(
@@ -247,6 +247,7 @@ coho_data_tbl_prior <- read_csv(params$f_prior_year_dataset)
 # anti_join(select(coho_data_tbl, StockID, year), select(coho_data_tbl_prior, StockID, year), by = c("StockID", "year"))
 # anti_join(select(coho_data_tbl_prior, StockID, year), select(coho_data_tbl, StockID, year), by = c("StockID", "year")) |> count(year)
 
+## SKIPPING FRAM UPDATE UNTIL I HAVE THE DATA
 #first update any FRAM values that have changed
 #then append RMIS CWT and smolt outmigrant updates
 coho_data_tbl <- coho_data_tbl_prior |> 
@@ -255,7 +256,7 @@ coho_data_tbl <- coho_data_tbl_prior |>
     fram$spwn_hvst_rtrn, #generated above from FRAM mdb
     by = c("pop_id", "pop", "StockID", "StockLongName", 
            "lon","lat","hab_km","smolt_ocn_surv_pop","hat",
-           "year")
+            "year")
   ) |> 
   rows_upsert(
     rmis$est_n_rel_rec,
@@ -294,12 +295,12 @@ coho_data_tbl_prelim <- coho_data_tbl |>
         range = "BKFRAM!A4:Z168", col_types = c("numeric", "text", rep("numeric", length(1998:2021)))) |>
         select(StockID = `Row Labels`, spwn = `2021`) |>
         mutate(year = 2021)
-      , by = c("StockID")
+       by = c("StockID")
     )
     ,
     by = c("pop_id", "pop", "StockID", "StockLongName", 
            "lon","lat","hab_km","smolt_ocn_surv_pop","hat",
-           "year")
+         "year")
   )
 
 
@@ -379,6 +380,8 @@ coho_data_tbl |> filter(year==2022) |> print(n=50)
 
 #write_csv(coho_data_tbl_prelim, "data/fram_cwt_smolt_fulljoin_for2023_prelim.csv")
 write_csv(coho_data_tbl, "data/fram_cwt_smolt_fulljoin_for2023.csv")
+
+coho_data_tbl <- read.csv("RAW_DATA/fram_cwt_smolt_fulljoin_for2023.csv")
 
 ```
 
@@ -762,7 +765,7 @@ set_names(2008:2018) |>
 }) |> 
   patchwork::wrap_plots(ncol = 1)
 
-ggsave("O:/code/coho/forecast_wb/f_oat_l3_by_pred_year.png", width = 7, height = 9)
+ggsave("FIGURES/f_oat_l3_by_pred_year.png", width = 7, height = 9)
 ```
 
 ### Lag3 50th with ribbons
@@ -812,7 +815,7 @@ ggplot(ggdata, aes(year)) +
   scale_color_manual(name = "", values = pal_lag_mod, na.translate = FALSE, aesthetics = c("color", "fill")) +
   theme(legend.position = "top")
 
-ggsave("O:/code/coho/forecast_wb/f_oat_l3_error.png", width = 7, height = 5)
+ggsave("FIGURES/f_oat_l3_error.png", width = 7, height = 5)
 
 ```
 
@@ -843,7 +846,7 @@ oat_lag_overlay <- function(stk = 161){
 
 oat_lag_overlay(161)
 
-#ggsave("O:/code/coho/forecast_wb/f_oat_pred_lag_overlay.png", width = 8, height = 9)
+#ggsave("FIGURES/f_oat_pred_lag_overlay.png", width = 8, height = 9)
 
 oat_lag_overlay(131) + #Quill Fall
 oat_lag_overlay(153) +  #Hump
@@ -898,7 +901,7 @@ oat_obs |>
   # gt::tab_source_note("Root Mean Square Error (RMSE)") |> 
   # #gt::tab_source_note("Mean Error (ME)")
 
-gt::gtsave("O:/code/coho/forecast_wb/gt_oat_perf_measures_09_19.png", expand = 20)
+gt::gtsave("FIGURES/gt_oat_perf_measures_09_19.png", expand = 20)
 
 
 perf_smry <- function(stk, summary_start_year = 2009){
